@@ -1,6 +1,4 @@
-import docx from "docx";
 import { Document, Paragraph, TextRun, Packer } from "docx";
-import fs from "fs"
 
 type Mensagem = {
   chaveCompra: {
@@ -24,7 +22,7 @@ const criarMensagemPregoeiro = (mensagem: Mensagem) => {
   return new Paragraph({
     children: [
       new TextRun({
-        text: `Pregoeiro -> Fornecedor - ${mensagem.dataHora}`,
+        text: `Pregoeiro - ${mensagem.dataHora}`,
         bold: true,
         break: 1,
         color: "4287f5"
@@ -139,14 +137,12 @@ const mensagensEmOrdemCronologica = mensagensFlatDeduped.sort((a, b) => {
 
 const formatarMesagem = (mensagem: Mensagem) => {
   switch (mensagem.tipoRemetente) {
-    case '0':
-      return criarMensagemSistema(mensagem);
     case '1':
       return criarMensagemFornecedor(mensagem)
     case '3':
       return criarMensagemPregoeiro(mensagem)
     default:
-      return '';
+      return criarMensagemSistema(mensagem);
   }
 }
 
@@ -155,11 +151,19 @@ const escreverMensagensEmArquivo = (mensagens: Mensagem[], nomeArquivo: string) 
 
   const mensagensFormatadas = mensagens.map(mensagem => formatarMesagem(mensagem));
 
-  if (fs.existsSync(nomeArquivo)) {
-    fs.unlinkSync(nomeArquivo);
-  }
-  
-  fs.writeFileSync(nomeArquivo, mensagensFormatadas.join('\n'));
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: mensagensFormatadas
+      }
+    ]
+  });
+
+
+  Packer.toBuffer(doc).then((buffer) => {
+    fs.writeFileSync("mensagensFormatadas.docx", buffer);
+  });
 }
 
 const mensagensEmOrdemCronologicaFiltradas = mensagensEmOrdemCronologica.filter((mensagem): mensagem is Mensagem => mensagem !== undefined);
@@ -167,6 +171,3 @@ const mensagensEmOrdemCronologicaFiltradas = mensagensEmOrdemCronologica.filter(
 escreverMensagensEmArquivo(mensagensEmOrdemCronologicaFiltradas, 'mensagensFormatadas.txt');
 
 
-Packer.toBuffer(doc).then((buffer) => {
-  fs.writeFileSync("mensagensFormatadas.docx", buffer);
-});
